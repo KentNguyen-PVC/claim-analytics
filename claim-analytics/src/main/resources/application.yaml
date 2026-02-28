@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: claim-analytics
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521/FREEPDB1
+    username: CLAIM
+    password: Claim123
+    driver-class-name: oracle.jdbc.OracleDriver
+#CREATE USER CLAIM IDENTIFIED BY Claim123;
+#GRANT CONNECT, RESOURCE TO CLAIM;
+#GRANT UNLIMITED TABLESPACE TO CLAIM;
+#GRANT CREATE PROCEDURE TO CLAIM;
+#GRANT CREATE VIEW TO CLAIM;
+#GRANT CREATE SEQUENCE TO CLAIM;
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+
+server:
+  port: 8080

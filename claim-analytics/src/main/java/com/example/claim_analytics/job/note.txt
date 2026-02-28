@@ -1,0 +1,9 @@
+- Có job để mỗi năm chạy EXTEND_CALENDAR đảm bảo có trước du lieu
+Ví dụ: giả sư có API từ hệ thống khác để lấy holidays / cần có giao diện để admin/user insert dữ liệu holidays:
+@Scheduled(cron = "0 0 1 1 1 ?")
+public void loadHolidayForNewYear() {
+    List<HolidayDto> holidays = holidayApiClient.fetch("VN", 2027);
+    holidayRepository.saveAll(holidays);
+    jdbcTemplate.execute("BEGIN CLAIM_SLA_PKG.extend_calendar('VN', DATE '2027-12-31'); END;");
+}
+-
