@@ -1,18 +1,24 @@
 package com.example.claim_analytics.controller;
 
-import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.claim_analytics.dto.SubmitClaimRequest;
+import com.example.claim_analytics.dto.request.CreateClaimRequest;
+import com.example.claim_analytics.dto.request.UpdateClaimStatusRequest;
+import com.example.claim_analytics.dto.response.ClaimResponse;
+import com.example.claim_analytics.dto.response.PageResponse;
+import com.example.claim_analytics.enums.ClaimStatus;
 import com.example.claim_analytics.service.ClaimService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-// For test
 @RestController
 @RequestMapping("/api/claims")
 @RequiredArgsConstructor
@@ -20,24 +26,26 @@ public class ClaimController {
 
 	private final ClaimService claimService;
 
-	@PostMapping("/submit")
-	public ResponseEntity<Long> submit(@RequestBody SubmitClaimRequest request) {
-
-		Long id = claimService.submitClaim(request);
-		return ResponseEntity.ok(id);
+	@PostMapping
+	public ClaimResponse create(@Valid @RequestBody CreateClaimRequest request) {
+		return claimService.createClaim(request);
 	}
 
-	@PostMapping("/{id}/approve")
-	public ResponseEntity<Void> approve(@PathVariable Long id) {
-
-		claimService.approveClaim(id);
-		return ResponseEntity.ok().build();
+	@GetMapping("/{claimId}")
+	public ClaimResponse getById(@PathVariable Long claimId) {
+		return claimService.getClaim(claimId);
 	}
 
-	@PostMapping("/{id}/reject")
-	public ResponseEntity<Void> reject(@PathVariable Long id) {
+	@GetMapping
+	public PageResponse<ClaimResponse> list(@RequestParam(required = false) Long policyId,
+			@RequestParam(required = false) ClaimStatus status, 
+			@RequestParam(defaultValue = "20") int limit,
+			@RequestParam(defaultValue = "0") int offset) {
+		return claimService.listClaims(policyId, status, limit, offset);
+	}
 
-		claimService.rejectClaim(id);
-		return ResponseEntity.ok().build();
+	@PatchMapping("/{claimId}")
+	public ClaimResponse updateStatus(@PathVariable Long claimId, @Valid @RequestBody UpdateClaimStatusRequest request) {
+		return claimService.updateStatus(claimId, request);
 	}
 }

@@ -8,7 +8,7 @@ INSERT INTO CALENDAR_DIM (
     VERSION_NO
 )
 SELECT
-    'VN' AS COUNTRY_CODE,
+    'SG' AS COUNTRY_CODE,
     d.cal_date,
 
     /* Is working day */
@@ -49,6 +49,6 @@ FROM (
     CONNECT BY LEVEL <= DATE '2050-12-31' - DATE '2024-01-01' + 1
 ) d
 LEFT JOIN HOLIDAY h
-    ON h.COUNTRY_CODE = 'VN'
+    ON h.COUNTRY_CODE = 'SG'
    AND h.HOLIDAY_DATE = d.cal_date
 ORDER BY d.cal_date;

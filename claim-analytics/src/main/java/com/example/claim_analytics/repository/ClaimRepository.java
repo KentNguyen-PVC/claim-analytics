@@ -1,52 +1,44 @@
 package com.example.claim_analytics.repository;
 
-import java.sql.PreparedStatement;
-import java.sql.Statement;
+import java.util.List;
+import java.util.Optional;
 
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import lombok.RequiredArgsConstructor;
+import com.example.claim_analytics.entity.Claim;
+import com.example.claim_analytics.enums.ClaimStatus;
 
 @Repository
-@RequiredArgsConstructor
-public class ClaimRepository {
+public interface ClaimRepository extends JpaRepository<Claim, Long>, ClaimRepositoryCustom {
 
-	private final JdbcTemplate jdbcTemplate;
+	List<Claim> findByClaimStatus(ClaimStatus status);
+	
+	List<Claim> findByPolicy_Id(Long policyId);
 
-	public Long createClaim(String claimNo, String claimType, String policyNo, String countryCode) {
+	List<Claim> findByPolicy_IdAndClaimStatus(Long policyId, ClaimStatus status);
 
-		KeyHolder keyHolder = new GeneratedKeyHolder();
+//	@Query("""
+//			    SELECT c FROM Claim c
+//			    WHERE (:policyId IS NULL OR c.policy.id = :policyId)
+//			      AND (:status IS NULL OR c.claimStatus = :status)
+//			    ORDER BY c.createdAt DESC
+//			""")
+//	Page<Claim> search(Long policyId, ClaimStatus status, Pageable pageable);
+	
+	Page<Claim> findByPolicy_IdAndClaimStatus(
+	        Long policyId,
+	        ClaimStatus status,
+	        Pageable pageable
+	);
 
-		jdbcTemplate.update(connection -> {
-			PreparedStatement ps = connection.prepareStatement("""
-					    INSERT INTO CLAIM (
-					        CLAIM_NO,
-					        CLAIM_TYPE,
-					        POLICY_NO,
-					        COUNTRY_CODE,
-					        FINAL_STATUS,
-					        SUBMITTED_AT,
-					        FINAL_DECISION_AT
-					    )
-					    VALUES (?, ?, ?, ?, 'SUBMITTED', SYSTIMESTAMP, SYSTIMESTAMP)
-					""", new String[]{"ID"});
-
-			ps.setString(1, claimNo);
-			ps.setString(2, claimType);
-			ps.setString(3, policyNo);
-			ps.setString(4, countryCode);
-
-			return ps;
-		}, keyHolder);
-
-		return keyHolder.getKey().longValue();
-	}
-
-	public void finalizeClaim(Long claimId, String status) {
-
-		jdbcTemplate.update("BEGIN CLAIM_SLA_PKG.finalize_claim(?,?); END;", claimId, status);
-	}
+	@Query("""
+			    SELECT c FROM Claim c
+			    JOIN FETCH c.policy
+			    WHERE c.claimId = :id
+			""")
+	Optional<Claim> findByIdWithPolicy(Long id);
 }

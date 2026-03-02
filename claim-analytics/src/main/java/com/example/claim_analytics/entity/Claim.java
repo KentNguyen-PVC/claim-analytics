@@ -1,12 +1,25 @@
 package com.example.claim_analytics.entity;
 
-import java.time.Instant;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+
+import com.example.claim_analytics.enums.ClaimStatus;
+import com.example.claim_analytics.enums.ClaimType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,41 +36,58 @@ import lombok.Setter;
 @Builder
 public class Claim {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long claimId;
 
-    @Column(name = "CLAIM_NO", nullable = false, unique = true)
-    private String claimNo;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "policy_id", nullable = false)
+	private Policy policy;
 
-    @Column(name = "CLAIM_TYPE", nullable = false)
-    private String claimType;
-    
-    @Column(name = "FINAL_STATUS", nullable = false)
-    private String finalStatus;
+	@Column(nullable = false, unique = true)
+	private String claimNumber;
 
-    @Column(name = "COUNTRY_CODE", nullable = false)
-    private String countryCode;
+	@Column(nullable = false)
+	private LocalDate claimDate;
 
-    @Column(name = "POLICY_NO", nullable = false)
-    private String policyNo;
+	@Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal claimAmount;
 
-    @Column(name = "SUBMITTED_AT")
-    private Instant submittedAt;
+    @Column(precision = 15, scale = 2)
+    private BigDecimal approvedAmount;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ClaimStatus claimStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private ClaimType claimType;
+
+	@Column(length = 500)
+	private String description;
+	
     @Column(name = "FINAL_DECISION_AT")
-    private Instant finalDecisionAt;
-
+    private LocalDateTime finalDecisionAt;
+    
     @Column(name = "TAT_WORKING_MINUTES")
     private Long tatWorkingMinutes;
 
-    @Column(name = "TAT_CALENDAR_MINUTES")
-    private Long tatCalendarMinutes;
+	@Column(nullable = false, updatable = false)
+	private OffsetDateTime createdAt;
+	
+	@Column(nullable = false)
+	private OffsetDateTime updatedAt;
+	
+	@PrePersist
+	protected void onCreate() {
+	    OffsetDateTime now = OffsetDateTime.now();
+	    this.createdAt = now;
+	    this.updatedAt = now;
+	}
 
-    @Column(name = "TAT_VERSION")
-    private Integer tatVersion;
-
-    @Column(name = "CREATED_AT", nullable = false)
-    private Instant createdAt;
+	@PreUpdate
+	protected void onUpdate() {
+	    this.updatedAt = OffsetDateTime.now();
+	}
 }

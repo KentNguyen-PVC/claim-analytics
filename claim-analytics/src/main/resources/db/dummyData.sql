@@ -1,44 +1,35 @@
 INSERT /*+ APPEND PARALLEL(8) */ INTO CLAIM (
-    CLAIM_NO,
+    POLICY_ID,
+    CLAIM_NUMBER,
+    CLAIM_DATE,
+    CLAIM_AMOUNT,
+    APPROVED_AMOUNT,
+    CLAIM_STATUS,
     CLAIM_TYPE,
-    COUNTRY_CODE,
-    POLICY_NO,
-    SUBMITTED_AT,
-    FINAL_STATUS,
+    DESCRIPTION,
+    CREATED_AT,
+    UPDATED_AT,
     FINAL_DECISION_AT,
-    TAT_WORKING_MINUTES,
-    TAT_CALENDAR_MINUTES,
-    TAT_VERSION,
-    CREATED_AT
+    TAT_WORKING_MINUTES
 )
 SELECT
-    'CLM-' || LEVEL,
-
-    CASE MOD(LEVEL,3)
-        WHEN 0 THEN 'HEALTH'
-        WHEN 1 THEN 'MOTOR'
-        ELSE 'TRAVEL'
-    END,
-
-    CASE MOD(LEVEL,3)
-        WHEN 0 THEN 'VN'
-        WHEN 1 THEN 'SG'
-        ELSE 'MY'
-    END,
-
-    'POL-' || LEVEL,
-
+    1,
+    'CLM-2026' || LEVEL,
     TIMESTAMP '2024-01-01 08:00:00'
       + NUMTODSINTERVAL(TRUNC(DBMS_RANDOM.VALUE(0,365)),'DAY'),
-
-    'SUBMITTED'
+    5000000,
+    NULL,
+    'SUBMITTED',
+    CASE MOD(LEVEL,3)
+        WHEN 0 THEN 'HOSPITALIZATION'
+        WHEN 1 THEN 'OUTPATIENT'
+        ELSE 'DENTAL'
+    END,
+    "Emergency surgery",
     SYSTIMESTAMP,
-    
-
-    NULL,
-    NULL,
-    1,
-    SYSTIMESTAMP
+    SYSTIMESTAMP,
+    TIMESTAMP '2024-01-01 08:00:00',
+    NULL
 
 FROM dual
 CONNECT BY LEVEL <= 1000000;
@@ -102,21 +93,34 @@ LEFT JOIN HOLIDAY h
 ORDER BY d.cal_date;
 
 
-
-
 DECLARE
     v_count NUMBER := 0;
+    v_rand  NUMBER;
+    v_new_status VARCHAR2(20);
 BEGIN
     FOR r IN (
-        SELECT ID
+        SELECT CLAIM_ID
         FROM CLAIM
-        WHERE FINAL_STATUS = 'SUBMITTED'
+        WHERE CLAIM_STATUS = 'SUBMITTED'
     )
     LOOP
-        CLAIM_SLA_PKG.finalize_claim(r.ID, 'APPROVED');
+        v_rand := DBMS_RANDOM.VALUE(0,100);
+
+        IF v_rand < 70 THEN
+            v_new_status := 'APPROVED';
+        ELSE
+            v_new_status := 'REJECTED';
+        END IF;
+
+        CLAIM_SLA_PKG.finalize_claim(
+            r.CLAIM_ID,
+            'SUBMITTED',
+            v_new_status
+        );
+
         v_count := v_count + 1;
 
-        IF v_count MOD 100 = 0 THEN
+        IF MOD(v_count, 500) = 0 THEN
             COMMIT;
         END IF;
     END LOOP;

@@ -1,11 +1,11 @@
 CREATE OR REPLACE PACKAGE BODY CLAIM_SLA_PKG AS
 
 ------------------------------------------------------------------
--- FUNCTION: calculate_working_minutes_8_17 (FIXED VERSION)
+-- FUNCTION: calculate_working_minutes_8_17
 ------------------------------------------------------------------
 FUNCTION calculate_working_minutes_8_17(
-    p_start        IN TIMESTAMP,
-    p_end          IN TIMESTAMP,
+   p_start        IN TIMESTAMP WITH TIME ZONE,
+    p_end          IN TIMESTAMP WITH TIME ZONE,
     p_country_code IN VARCHAR2
 ) RETURN NUMBER
 IS
@@ -46,7 +46,9 @@ BEGIN
     INTO v_minutes
     FROM CALENDAR_DIM c
     WHERE c.COUNTRY_CODE = p_country_code
-      AND c.CAL_DATE BETWEEN TRUNC(p_start) AND TRUNC(p_end)
+      AND c.CAL_DATE >= TRUNC(p_start)
+	  AND c.CAL_DATE < TRUNC(p_end) + 1
+     -- AND c.CAL_DATE BETWEEN TRUNC(p_start) AND TRUNC(p_end)
       AND c.IS_WORKING_DAY = 1;
 
     RETURN v_minutes;
@@ -59,22 +61,33 @@ END calculate_working_minutes_8_17;
 ------------------------------------------------------------------
 PROCEDURE finalize_claim(
     p_claim_id     IN NUMBER,
+    p_from_status  IN VARCHAR2,
     p_status       IN VARCHAR2
 )
 IS
-    v_submitted_at TIMESTAMP;
+    v_submitted_at TIMESTAMP WITH TIME ZONE;
     v_country      VARCHAR2(10);
     v_sla_minutes  NUMBER;
+    v_current_status VARCHAR2(50);
 BEGIN
 
-    SELECT SUBMITTED_AT, COUNTRY_CODE
-    INTO v_submitted_at, v_country
-    FROM CLAIM
-    WHERE ID = p_claim_id
+    SELECT c.CREATED_AT,
+           c.CLAIM_STATUS,
+           p.COUNTRY_CODE
+    INTO v_submitted_at,
+         v_current_status,
+         v_country
+    FROM CLAIM c
+    JOIN POLICY p ON p.ID = c.POLICY_ID
+    WHERE c.CLAIM_ID = p_claim_id
     FOR UPDATE;
 
-    IF v_submitted_at IS NULL THEN
-        RAISE_APPLICATION_ERROR(-20002, 'Claim not submitted');
+    IF v_current_status != p_from_status THEN
+        RAISE_APPLICATION_ERROR(-20005, 'Invalid status transition');
+    END IF;
+
+    IF v_current_status IN ('APPROVED','REJECTED') THEN
+        RAISE_APPLICATION_ERROR(-20006, 'Already finalized');
     END IF;
 
     IF p_status NOT IN ('APPROVED','REJECTED') THEN
@@ -89,25 +102,26 @@ BEGIN
         );
 
     UPDATE CLAIM
-    SET FINAL_DECISION_AT    = SYSTIMESTAMP,
-        TAT_WORKING_MINUTES  = v_sla_minutes,
-    	FINAL_STATUS         = p_status
-    WHERE ID = p_claim_id;
+    SET FINAL_DECISION_AT   = CAST(SYSTIMESTAMP AT TIME ZONE 'UTC' AS TIMESTAMP),
+        TAT_WORKING_MINUTES = v_sla_minutes,
+        CLAIM_STATUS        = p_status,
+        UPDATED_AT          = SYSTIMESTAMP AT TIME ZONE 'UTC'
+    WHERE CLAIM_ID = p_claim_id;
 
     INSERT INTO CLAIM_STATUS_HISTORY(
         CLAIM_ID,
-        STATUS,
-        STATUS_AT,
+        FROM_STATUS,
+        TO_STATUS,
+        CHANGED_AT,
         IS_FINAL
     )
     VALUES(
         p_claim_id,
+        p_from_status,
         p_status,
         SYSTIMESTAMP,
         1
     );
-
-    COMMIT;
 
 EXCEPTION
     WHEN NO_DATA_FOUND THEN

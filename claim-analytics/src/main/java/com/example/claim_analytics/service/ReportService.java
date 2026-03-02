@@ -1,11 +1,11 @@
 package com.example.claim_analytics.service;
 
-import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 
-import com.example.claim_analytics.dto.ReportDTO;
+import com.example.claim_analytics.dto.response.ReportDTO;
 
 public interface ReportService {
 
-	List<ReportDTO> getTatReport(Instant from, Instant to, String country);
+	List<ReportDTO> getTatReport(OffsetDateTime from, OffsetDateTime to);
 }

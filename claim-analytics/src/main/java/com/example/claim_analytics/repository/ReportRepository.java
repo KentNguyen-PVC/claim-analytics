@@ -1,6 +1,6 @@
 package com.example.claim_analytics.repository;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,7 +17,7 @@ public interface ReportRepository extends JpaRepository<Claim, Long> {
     @Query("""
         SELECT 
             c.claimType as claimType,
-            c.finalStatus as status,
+            c.claimStatus as status,
             COUNT(c.id) as totalClaims,
             AVG(c.tatWorkingMinutes) as avgTatMinutes,
             MIN(c.tatWorkingMinutes) as minTatMinutes,
@@ -25,12 +25,12 @@ public interface ReportRepository extends JpaRepository<Claim, Long> {
         FROM Claim c
         WHERE c.finalDecisionAt BETWEEN :from AND :to
           AND c.tatWorkingMinutes IS NOT NULL
-          AND (:country IS NULL OR c.countryCode = :country)
-        GROUP BY c.claimType, c.finalStatus
+        GROUP BY c.claimType, c.claimStatus
     """)
+    // AND (:country IS NULL OR c.countryCode = :country)
     List<ClaimTatReportView> getTatReport(
-            @Param("from") Instant from,
-            @Param("to") Instant to,
-            @Param("country") String country
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to
+//            @Param("country") String country
     );
 }

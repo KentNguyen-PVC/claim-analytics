@@ -1,13 +1,15 @@
 package com.example.claim_analytics.service.impl;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
+//import org.springframework.util.StringUtils;
 
-import com.example.claim_analytics.dto.ReportDTO;
+import com.example.claim_analytics.dto.response.ReportDTO;
 import com.example.claim_analytics.model.ClaimTatReportView;
 import com.example.claim_analytics.repository.ReportRepository;
 import com.example.claim_analytics.service.ReportService;
@@ -21,13 +23,21 @@ public class ReportServiceImpl implements ReportService {
 
 	@Override
 	@Transactional(readOnly = true)
-	public List<ReportDTO> getTatReport(Instant from, Instant to, String country) {
+	public List<ReportDTO> getTatReport(OffsetDateTime from, OffsetDateTime to) { //, String country
 
 		validatePeriod(from, to);
 
-		String normalizedCountry = normalizeCountry(country);
+//		String normalizedCountry = normalizeCountry(country);
+		
+		LocalDateTime fromUtc = from
+	            .withOffsetSameInstant(ZoneOffset.UTC)
+	            .toLocalDateTime();
 
-		List<ClaimTatReportView> results = reportRepository.getTatReport(from, to, normalizedCountry);
+	    LocalDateTime toUtc = to
+	            .withOffsetSameInstant(ZoneOffset.UTC)
+	            .toLocalDateTime();
+
+		List<ClaimTatReportView> results = reportRepository.getTatReport(fromUtc, toUtc);
 
 		return results.stream().map(this::mapToDto).toList();
 	}
@@ -36,7 +46,7 @@ public class ReportServiceImpl implements ReportService {
 	// PRIVATE METHODS
 	// ================================
 
-	private void validatePeriod(Instant from, Instant to) {
+	private void validatePeriod(OffsetDateTime from, OffsetDateTime to) {
 
 		if (from == null || to == null) {
 			throw new IllegalArgumentException("From and To must not be null");
@@ -51,14 +61,14 @@ public class ReportServiceImpl implements ReportService {
 		}
 	}
 
-	private String normalizeCountry(String country) {
-
-		if (!StringUtils.hasText(country)) {
-			return null;
-		}
-
-		return country.trim().toUpperCase();
-	}
+//	private String normalizeCountry(String country) {
+//
+//		if (!StringUtils.hasText(country)) {
+//			return null;
+//		}
+//
+//		return country.trim().toUpperCase();
+//	}
 
 	private ReportDTO mapToDto(ClaimTatReportView view) {
 
