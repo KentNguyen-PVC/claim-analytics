@@ -25,7 +25,7 @@ SELECT
         WHEN 1 THEN 'OUTPATIENT'
         ELSE 'DENTAL'
     END,
-    "Emergency surgery",
+    'Emergency surgery',
     SYSTIMESTAMP,
     SYSTIMESTAMP,
     TIMESTAMP '2024-01-01 08:00:00',
