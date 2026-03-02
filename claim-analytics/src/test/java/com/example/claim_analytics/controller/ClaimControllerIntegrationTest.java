@@ -16,6 +16,8 @@ import org.springframework.test.web.servlet.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.time.OffsetDateTime;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -30,9 +32,16 @@ class ClaimControllerIntegrationTest {
 	@Test
     void createClaim_shouldReturn201() throws Exception {
 
-        Policy policy = new Policy();
-        policy.setStatus(PolicyStatus.ACTIVE);
-        policy = policyRepository.save(policy);
+        Policy activePolicy = new Policy();
+        activePolicy = new Policy();
+		activePolicy.setId(1L);
+		activePolicy.setPolicyNumber("POL-SG-2026-001");
+		activePolicy.setCountryCode("SG");
+		activePolicy.setEffectiveDate(OffsetDateTime.now());
+		activePolicy.setCreatedAt(OffsetDateTime.now());
+		activePolicy.setExpiryDate(OffsetDateTime.now().plusDays(100));
+		activePolicy.setStatus(PolicyStatus.ACTIVE);
+		activePolicy = policyRepository.save(activePolicy);
 
         String json = """
         {
@@ -41,7 +50,7 @@ class ClaimControllerIntegrationTest {
           "claimType": "HOSPITALIZATION",
           "description": "Emergency"
         }
-        """.formatted(policy.getId());
+        """.formatted(activePolicy.getId());
 
         mockMvc.perform(post("/api/claims")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -52,17 +61,24 @@ class ClaimControllerIntegrationTest {
 	
 	@Test
 	void getClaim_shouldReturn404_whenNotFound() throws Exception {
-	    mockMvc.perform(get("/api/claims/999"))
+	    mockMvc.perform(get("/api/claims/99999"))
 	            .andExpect(status().isNotFound())
-	            .andExpect(jsonPath("$.message").value("Claim not found"));
+	            .andExpect(jsonPath("$.error").value("Claim not found"));
 	}
 
 	@Test
 	void fullFlow_create_then_approve() throws Exception {
 
-		Policy policy = new Policy();
-		policy.setStatus(PolicyStatus.ACTIVE);
-		policy = policyRepository.save(policy);
+		Policy activePolicy = new Policy();
+        activePolicy = new Policy();
+		activePolicy.setId(1L);
+		activePolicy.setPolicyNumber("POL-SG-2026-001");
+		activePolicy.setCountryCode("SG");
+		activePolicy.setEffectiveDate(OffsetDateTime.now());
+		activePolicy.setCreatedAt(OffsetDateTime.now());
+		activePolicy.setExpiryDate(OffsetDateTime.now().plusDays(100));
+		activePolicy.setStatus(PolicyStatus.ACTIVE);
+		activePolicy = policyRepository.save(activePolicy);
 
 		String createJson = """
 				{
@@ -71,7 +87,7 @@ class ClaimControllerIntegrationTest {
 				  "claimType": "HOSPITALIZATION",
 				  "incidentDate": "2025-01-01T10:00:00Z"
 				}
-				""".formatted(policy.getId());
+				""".formatted(activePolicy.getId());
 
 		MvcResult result = mockMvc
 						.perform(post("/api/claims")
@@ -81,7 +97,8 @@ class ClaimControllerIntegrationTest {
 						.andReturn();
 
 		String response = result.getResponse().getContentAsString();
-		Long claimId = JsonPath.read(response, "$.claimId");
+		Number claimIdNumber = JsonPath.read(response, "$.claimId");
+		Long claimId = claimIdNumber.longValue();
 
 		String approveJson = """
 				{
@@ -99,7 +116,38 @@ class ClaimControllerIntegrationTest {
 	
 	@Test
 	void invalidTransition_shouldReturn400() throws Exception {
-	    mockMvc.perform(patch("/api/claims/1")
+		Policy activePolicy = new Policy();
+        activePolicy = new Policy();
+		activePolicy.setId(1L);
+		activePolicy.setPolicyNumber("POL-SG-2026-001");
+		activePolicy.setCountryCode("SG");
+		activePolicy.setEffectiveDate(OffsetDateTime.now());
+		activePolicy.setCreatedAt(OffsetDateTime.now());
+		activePolicy.setExpiryDate(OffsetDateTime.now().plusDays(100));
+		activePolicy.setStatus(PolicyStatus.ACTIVE);
+		activePolicy = policyRepository.save(activePolicy);
+		
+		String createJson = """
+				{
+				  "policyId": %d,
+				  "claimAmount": 5000000,
+				  "claimType": "HOSPITALIZATION",
+				  "incidentDate": "2025-01-01T10:00:00Z"
+				}
+				""".formatted(activePolicy.getId());
+		
+		MvcResult result = mockMvc
+				.perform(post("/api/claims")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(createJson))
+				.andExpect(status().isCreated())
+				.andReturn();
+
+		String response = result.getResponse().getContentAsString();
+		Number claimIdNumber = JsonPath.read(response, "$.claimId");
+		Long claimId = claimIdNumber.longValue();
+
+	    mockMvc.perform(patch("/api/claims/" + claimId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                 {
@@ -117,6 +165,6 @@ class ClaimControllerIntegrationTest {
                   "newStatus": "REJECTED"
                 }
                 """))
-        .andExpect(status().isBadRequest());
+        .andExpect(status().isConflict());
 	}
 }

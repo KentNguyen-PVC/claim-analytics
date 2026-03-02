@@ -57,6 +57,11 @@ public class ClaimServiceImpl implements ClaimService {
 		if (request.getClaimAmount().compareTo(BigDecimal.ZERO) <= 0) {
 			throw new BadRequestException("Claim amount must be greater than 0");
 		}
+		
+		if (request.getDescription() != null &&
+		    request.getDescription().length() > 500) {
+		    throw new BadRequestException("Description must not exceed 500 characters");
+		}
 
 		Claim claim = Claim.builder()
 				.policy(policy)
@@ -128,8 +133,9 @@ public class ClaimServiceImpl implements ClaimService {
 	        );
 	        entityManager.clear();
 
-	        return getClaim(claimId);
+//	        return getClaim(claimId);
 	    }
+		claim.setClaimStatus(newStatus);
 
 		log.info("Claim {} updated to {}", claimId, request.getNewStatus());
 
