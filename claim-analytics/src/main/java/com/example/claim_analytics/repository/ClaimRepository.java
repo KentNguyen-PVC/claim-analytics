@@ -14,20 +14,10 @@ import com.example.claim_analytics.enums.ClaimStatus;
 
 @Repository
 public interface ClaimRepository extends JpaRepository<Claim, Long>, ClaimRepositoryCustom {
-
-	List<Claim> findByClaimStatus(ClaimStatus status);
 	
 	List<Claim> findByPolicy_Id(Long policyId);
 
 	List<Claim> findByPolicy_IdAndClaimStatus(Long policyId, ClaimStatus status);
-
-//	@Query("""
-//			    SELECT c FROM Claim c
-//			    WHERE (:policyId IS NULL OR c.policy.id = :policyId)
-//			      AND (:status IS NULL OR c.claimStatus = :status)
-//			    ORDER BY c.createdAt DESC
-//			""")
-//	Page<Claim> search(Long policyId, ClaimStatus status, Pageable pageable);
 	
 	Page<Claim> findByPolicy_IdAndClaimStatus(
 	        Long policyId,
