@@ -38,9 +38,6 @@ The following was discovered as part of building this project:
     - Used fetch join to avoid N+1
     - Used stored procedure for SLA finalization
 
-    * Assumptions
-    - Claim status transitions are linear
-
 
 ### Reference Documentation
 For further reference, please consider the following sections:
